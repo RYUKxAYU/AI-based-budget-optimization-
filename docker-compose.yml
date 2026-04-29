@@ -1,0 +1,206 @@
+# =============================================================================
+# docker-compose.yml — AI Based Green Budget Optimizer
+# Microservices Architecture (Phase 2)
+#
+# Services:
+#   db            — PostgreSQL database (shared across all services)
+#   auth-service  — JWT authentication (port 8001)
+#   data-service  — Dataset management & ingestion (port 8002)
+#   model-service — AQI Random Forest model serving (port 8003)
+#   optim-service — Budget optimization engine (port 8004)
+#   frontend      — Placeholder / future web UI (port 3000)
+#
+# Usage:
+#   docker-compose up --build          # Start all services
+#   docker-compose up db auth-service  # Start specific services
+#   docker-compose down -v             # Stop and remove volumes
+# =============================================================================
+
+version: "3.9"
+
+# ─── Named volumes ────────────────────────────────────────────────────────────
+volumes:
+  postgres_data:
+    driver: local
+  model_artifacts:
+    driver: local
+
+# ─── Shared network ───────────────────────────────────────────────────────────
+networks:
+  green_budget_net:
+    driver: bridge
+
+# =============================================================================
+# SERVICES
+# =============================================================================
+services:
+
+  # ── PostgreSQL Database ──────────────────────────────────────────────────────
+  db:
+    image: postgres:15-alpine
+    container_name: green_budget_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-budget_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-budget_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-budget_optimizer}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - green_budget_net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-budget_user} -d ${POSTGRES_DB:-budget_optimizer}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── Alembic Migration Runner ─────────────────────────────────────────────────
+  # Runs DB migrations once on startup, then exits.
+  migrate:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.migrate
+    container_name: green_budget_migrate
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-budget_user}:${POSTGRES_PASSWORD:-budget_pass}@db:5432/${POSTGRES_DB:-budget_optimizer}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - green_budget_net
+    restart: "no"
+
+  # ── Auth Service ─────────────────────────────────────────────────────────────
+  auth-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.auth
+    container_name: green_budget_auth
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-budget_user}:${POSTGRES_PASSWORD:-budget_pass}@db:5432/${POSTGRES_DB:-budget_optimizer}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-1440}
+    ports:
+      - "${AUTH_SERVICE_PORT:-8001}:8001"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - green_budget_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Data Service ─────────────────────────────────────────────────────────────
+  data-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.data
+    container_name: green_budget_data
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-budget_user}:${POSTGRES_PASSWORD:-budget_pass}@db:5432/${POSTGRES_DB:-budget_optimizer}
+      DATA_SOURCE: ${DATA_SOURCE:-synthetic}
+      OPENAQ_API_KEY: ${OPENAQ_API_KEY}
+    ports:
+      - "${DATA_SERVICE_PORT:-8002}:8002"
+    volumes:
+      - ./green_budget_optimizer/data:/app/data
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - green_budget_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Model Service ────────────────────────────────────────────────────────────
+  model-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.model
+    container_name: green_budget_model
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-budget_user}:${POSTGRES_PASSWORD:-budget_pass}@db:5432/${POSTGRES_DB:-budget_optimizer}
+      MODEL_PATH: ${MODEL_PATH:-/app/artifacts/aqi_forest_model.pkl}
+      ENABLE_SHAP: ${ENABLE_SHAP:-false}
+    ports:
+      - "${MODEL_SERVICE_PORT:-8003}:8003"
+    volumes:
+      - model_artifacts:/app/artifacts
+      - ./green_budget_optimizer/outputs:/app/outputs:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      data-service:
+        condition: service_healthy
+    networks:
+      - green_budget_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Optimization Service ─────────────────────────────────────────────────────
+  optim-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.optim
+    container_name: green_budget_optim
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-budget_user}:${POSTGRES_PASSWORD:-budget_pass}@db:5432/${POSTGRES_DB:-budget_optimizer}
+      ENABLE_BAYESIAN_OPT: ${ENABLE_BAYESIAN_OPT:-false}
+    ports:
+      - "${OPTIMIZATION_SERVICE_PORT:-8004}:8004"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+      model-service:
+        condition: service_healthy
+    networks:
+      - green_budget_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+
+  # ── Frontend Placeholder ─────────────────────────────────────────────────────
+  # Replace this with your actual frontend build when ready.
+  frontend:
+    image: nginx:alpine
+    container_name: green_budget_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-3000}:80"
+    depends_on:
+      - auth-service
+      - model-service
+      - optim-service
+    networks:
+      - green_budget_net

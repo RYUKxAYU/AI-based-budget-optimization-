@@ -1,0 +1,94 @@
+# =============================================================================
+# .gitignore — AI Based Green Budget Optimizer
+# =============================================================================
+
+# ─── Python ───────────────────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+eggs/
+parts/
+var/
+sdist/
+develop-eggs/
+.installed.cfg
+lib/
+lib64/
+MANIFEST
+
+# ─── Virtual Environments ─────────────────────────────────────────────────────
+.venv/
+venv/
+ENV/
+env/
+.env.bak
+
+# ─── Jupyter Notebooks ────────────────────────────────────────────────────────
+.ipynb_checkpoints/
+*.ipynb
+
+# ─── Distribution / Packaging ─────────────────────────────────────────────────
+*.whl
+*.tar.gz
+
+# ─── Testing ──────────────────────────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+*.coveragerc
+.tox/
+
+# ─── ML / Data artifacts ──────────────────────────────────────────────────────
+# Keep PNGs but ignore large model and CSV files
+*.pkl
+*.h5
+*.pt
+*.pth
+green_budget_optimizer/data/synthetic_dataset.csv
+green_budget_optimizer/data/processed_dataset.csv
+green_budget_optimizer/outputs/*.pkl
+
+# Keep output PNGs (charts) — they're useful for documentation
+# To ignore them too, uncomment:
+# green_budget_optimizer/outputs/*.png
+
+# ─── Database ─────────────────────────────────────────────────────────────────
+data/app.db
+*.db
+*.sqlite
+*.sqlite3
+
+# ─── Alembic ──────────────────────────────────────────────────────────────────
+shared/migrations/__pycache__/
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+.docker/
+
+# ─── IDE / Editor ─────────────────────────────────────────────────────────────
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+*.log
+logs/
+
+# ─── Environment Variables ────────────────────────────────────────────────────
+# NEVER commit real secrets
+# .env files are committed with placeholder values only
+# If you use real keys locally, ensure they are gitignored:
+# .env.local
+# .env.production
+
+# ─── OS Files ─────────────────────────────────────────────────────────────────
+desktop.ini
+ehthumbs.db

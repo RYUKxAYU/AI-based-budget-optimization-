@@ -1,0 +1,26 @@
+# Dockerfile.data — Data Service
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir \
+    fastapi==0.111.0 \
+    uvicorn[standard]==0.29.0 \
+    sqlalchemy==2.0.30 \
+    psycopg2-binary==2.9.9 \
+    pandas>=1.5.0 \
+    numpy>=1.23.0 \
+    requests>=2.28.0 \
+    beautifulsoup4>=4.11.0 \
+    python-dotenv==1.0.1 \
+    pydantic==2.7.1
+
+COPY shared/ ./shared/
+COPY green_budget_optimizer/data/ ./green_budget_optimizer/data/
+COPY green_budget_optimizer/config.py ./green_budget_optimizer/config.py
+COPY .env .env
+
+ENV PYTHONPATH=/app
+EXPOSE 8002
+
+CMD ["uvicorn", "services.data.main:app", "--host", "0.0.0.0", "--port", "8002"]

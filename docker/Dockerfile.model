@@ -1,0 +1,29 @@
+# Dockerfile.model — Model Service (AQI Random Forest)
+FROM python:3.12-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir \
+    fastapi==0.111.0 \
+    uvicorn[standard]==0.29.0 \
+    sqlalchemy==2.0.30 \
+    psycopg2-binary==2.9.9 \
+    pandas>=1.5.0 \
+    numpy>=1.23.0 \
+    scikit-learn>=1.2.0 \
+    joblib>=1.2.0 \
+    scipy>=1.10.0 \
+    python-dotenv==1.0.1 \
+    pydantic==2.7.1
+
+COPY shared/ ./shared/
+COPY green_budget_optimizer/ ./green_budget_optimizer/
+COPY .env .env
+
+# Model artifacts volume mount point
+RUN mkdir -p /app/artifacts
+
+ENV PYTHONPATH=/app
+EXPOSE 8003
+
+CMD ["uvicorn", "services.model.main:app", "--host", "0.0.0.0", "--port", "8003"]

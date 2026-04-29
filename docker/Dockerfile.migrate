@@ -1,0 +1,17 @@
+# Dockerfile.migrate — Runs Alembic migrations then exits
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install only what Alembic + SQLAlchemy needs
+RUN pip install --no-cache-dir alembic sqlalchemy psycopg2-binary python-dotenv
+
+# Copy shared DB layer
+COPY shared/ ./shared/
+COPY .env .env
+
+# Set PYTHONPATH so alembic can import shared.db
+ENV PYTHONPATH=/app
+
+# Run migrations
+CMD ["alembic", "-c", "shared/migrations/alembic.ini", "upgrade", "head"]
