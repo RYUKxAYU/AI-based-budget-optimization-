@@ -190,6 +190,36 @@ services:
       timeout: 5s
       retries: 3
 
+  # ── FastAPI API Service ──────────────────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: green_budget_api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-budget_user}:${POSTGRES_PASSWORD:-budget_pass}@db:5432/${POSTGRES_DB:-AQIDB}
+      APP_ENV: ${APP_ENV:-production}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    ports:
+      - "${API_PORT:-8000}:8000"
+    volumes:
+      - model_artifacts:/app/green_budget_optimizer/outputs
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+    networks:
+      - green_budget_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
   # ── Frontend Placeholder ─────────────────────────────────────────────────────
   # Replace this with your actual frontend build when ready.
   frontend:
@@ -199,8 +229,10 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:80"
     depends_on:
+      - api
       - auth-service
       - model-service
       - optim-service
     networks:
       - green_budget_net
+
