@@ -39,7 +39,10 @@ _db_url = os.getenv(
     "DATABASE_URL",
     "sqlite:///" + str(PROJECT_ROOT / "data" / "app.db"),
 )
-config.set_main_option("sqlalchemy.url", _db_url)
+# configparser uses % as interpolation prefix — escape all % as %% to prevent crash
+# e.g. Ayush%237897 → Ayush%%237897 (configparser reads it back as Ayush%237897)
+_db_url_safe = _db_url.replace("%", "%%")
+config.set_main_option("sqlalchemy.url", _db_url_safe)
 
 # ─── Logging ─────────────────────────────────────────────────────────────────
 if config.config_file_name is not None:
