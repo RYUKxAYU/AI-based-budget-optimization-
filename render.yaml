@@ -1,0 +1,54 @@
+# render.yaml — Render.com deployment configuration
+# Docs: https://render.com/docs/blueprint-spec
+#
+# Deploy: Push to main branch → Render auto-deploys via this blueprint
+# Dashboard: https://dashboard.render.com
+
+services:
+  # ── FastAPI Backend ──────────────────────────────────────────────────────────
+  - type: web
+    name: green-budget-api
+    runtime: docker
+    dockerfilePath: Dockerfile.prod
+    dockerContext: .
+    region: singapore          # closest to India
+    plan: free                 # upgrade to starter ($7/mo) for always-on
+    branch: deployment-ready-branch
+
+    healthCheckPath: /health
+
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: green-budget-db
+          property: connectionString
+      - key: JWT_SECRET_KEY
+        generateValue: true    # Render auto-generates a secure random value
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: JWT_EXPIRE_MINUTES
+        value: "1440"
+      - key: APP_ENV
+        value: production
+      - key: LOG_LEVEL
+        value: INFO
+      - key: MODEL_PATH
+        value: green_budget_optimizer/outputs/aqi_forest_model.pkl
+      - key: DATA_SOURCE
+        value: synthetic
+      - key: ENABLE_SHAP
+        value: "false"
+      - key: ENABLE_BAYESIAN_OPT
+        value: "false"
+      - key: RANDOM_SEED
+        value: "42"
+      - key: ALLOWED_ORIGINS
+        value: https://green-budget-frontend.vercel.app,http://localhost:3000
+
+  # ── PostgreSQL Database ──────────────────────────────────────────────────────
+databases:
+  - name: green-budget-db
+    databaseName: AQIDB
+    user: budget_user
+    region: singapore
+    plan: free                 # 90-day free, then $7/mo

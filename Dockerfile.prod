@@ -1,0 +1,43 @@
+# multi-stage production Dockerfile
+# Stage 1 — dependency builder
+FROM python:3.12-slim AS builder
+WORKDIR /build
+COPY requirements.txt .
+RUN pip install --no-cache-dir --prefix=/install -r requirements.txt
+
+# Stage 2 — lean runtime image
+FROM python:3.12-slim AS runtime
+WORKDIR /app
+
+# Copy installed packages from builder
+COPY --from=builder /install /usr/local
+
+# System deps (curl for healthcheck only)
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy application source
+COPY green_budget_optimizer/ ./green_budget_optimizer/
+COPY services/ ./services/
+COPY shared/ ./shared/
+COPY .env.example .env
+
+# Runtime dirs
+RUN mkdir -p green_budget_optimizer/outputs green_budget_optimizer/data
+
+# Security: non-root user
+RUN useradd -m -u 1001 appuser && chown -R appuser /app
+USER appuser
+
+ENV PYTHONPATH=/app
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
+ENV PORT=8000
+
+EXPOSE 8000
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+    CMD curl -f http://localhost:${PORT}/health || exit 1
+
+# 2 workers for production (Render gives 512MB RAM on free tier)
+CMD ["sh", "-c", "uvicorn services.api.main:app --host 0.0.0.0 --port ${PORT} --workers 2 --log-level info"]

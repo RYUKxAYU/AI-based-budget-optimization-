@@ -1,0 +1,85 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@import "tailwindcss";
+
+@theme {
+  --color-navy: #0F1929;
+  --color-navy-800: #0a1120;
+  --color-navy-900: #070d17;
+  
+  --color-teal: #00D4AA;
+  --color-teal-400: #00e8bb;
+  --color-teal-600: #00b891;
+  
+  --color-amber: #F59E0B;
+  --color-amber-400: #FBBF24;
+  
+  --color-danger: #EF4444;
+  --color-danger-400: #F87171;
+  
+  --color-slate: #94A3B8;
+  --color-slate-700: #334155;
+  --color-slate-800: #1E293B;
+
+  --animate-fade-in: fadeIn 0.5s ease-in-out;
+  --animate-slide-up: slideUp 0.4s ease-out;
+  --animate-count-up: countUp 1s ease-out;
+  --animate-pulse-glow: pulseGlow 2s ease-in-out infinite;
+
+  @keyframes fadeIn {
+    0% { opacity: 0; }
+    100% { opacity: 1; }
+  }
+  @keyframes slideUp {
+    0% { transform: translateY(20px); opacity: 0; }
+    100% { transform: translateY(0); opacity: 1; }
+  }
+  @keyframes pulseGlow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(0, 212, 170, 0.4); }
+    50% { box-shadow: 0 0 20px 8px rgba(0, 212, 170, 0.1); }
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background-color: var(--color-navy);
+  color: #e2e8f0;
+  font-family: 'Inter', system-ui, sans-serif;
+  min-height: 100vh;
+}
+
+/* Glassmorphism card */
+@layer components {
+  .glass {
+    background: rgba(255, 255, 255, 0.04);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+  }
+
+  /* Teal glow button */
+  .btn-primary {
+    @apply bg-teal text-navy font-semibold px-6 py-2.5 rounded-xl transition-all duration-200;
+    @apply hover:brightness-110 hover:scale-[1.02] active:scale-95;
+    box-shadow: 0 0 20px rgba(0, 212, 170, 0.2);
+  }
+
+  .btn-ghost {
+    @apply border border-white/20 text-slate px-6 py-2.5 rounded-xl transition-all duration-200;
+    @apply hover:border-teal/50 hover:text-teal;
+  }
+}
+
+/* Stagger animations */
+.stagger-1 { animation-delay: 0.1s; }
+.stagger-2 { animation-delay: 0.2s; }
+.stagger-3 { animation-delay: 0.3s; }
+.stagger-4 { animation-delay: 0.4s; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #0a1120; }
+::-webkit-scrollbar-thumb { background: #1e3a3a; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,212,170,0.25); }

@@ -27,7 +27,8 @@ venv/
 ENV/
 env/
 .env.bak
-
+.env.example
+.env
 # ─── Jupyter Notebooks ────────────────────────────────────────────────────────
 .ipynb_checkpoints/
 *.ipynb
